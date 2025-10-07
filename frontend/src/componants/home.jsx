@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 
 const Home = () => {
@@ -8,10 +8,17 @@ const Home = () => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  // ✅ handle logout
+  // ✅ ref for auto-scroll
+  const messagesEndRef = useRef(null);
+
+  // ✅ auto-scroll whenever messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handleLogout = () => {
-    localStorage.removeItem("token"); // example: remove token if stored
-    window.location.href = "/login"; // redirect to login page
+    localStorage.removeItem("token");
+    window.location.href = "/login";
   };
 
   const sendMessage = async (e) => {
@@ -61,7 +68,8 @@ const Home = () => {
       {/* Chat Box */}
       <div className="w-full max-w-2xl bg-gray-800 bg-opacity-60 backdrop-blur-md rounded-2xl shadow-lg flex flex-col h-[70vh] p-4 overflow-hidden">
         {/* Messages */}
-        <div className="p-3 flex-1 overflow-y-auto space-y-3 mb-3 px-3 rounded-lg bg-gray-900">
+        <div className="p-3 flex-1 overflow-y-auto space-y-3 mb-3 px-3 rounded-lg bg-gray-900 
+                scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-gray-700">
           {messages.map((msg, index) => (
             <div
               key={index}
@@ -91,6 +99,9 @@ const Home = () => {
               </div>
             </div>
           )}
+
+          {/* ✅ Dummy div for auto-scroll */}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Box */}
