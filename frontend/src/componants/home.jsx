@@ -7,9 +7,24 @@ const Home = () => {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [userId, setUserId] = useState(""); // ✅ User ID state add kiya
 
   // ✅ ref for auto-scroll
   const messagesEndRef = useRef(null);
+
+  // ✅ User ID generate karo on component mount
+  useEffect(() => {
+    const generateUserId = () => {
+      let storedUserId = localStorage.getItem("chatUserId");
+      if (!storedUserId) {
+        storedUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("chatUserId", storedUserId);
+      }
+      setUserId(storedUserId);
+    };
+
+    generateUserId();
+  }, []);
 
   // ✅ auto-scroll whenever messages change
   useEffect(() => {
@@ -18,6 +33,7 @@ const Home = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("chatUserId"); // ✅ User ID bhi clear karo
     window.location.href = "/login";
   };
 
@@ -33,9 +49,10 @@ const Home = () => {
     try {
       const res = await axios.post("http://localhost:5000/api/chat", {
         message: input,
+        userId: userId // ✅ YEH LINE ADD KARO - User ID bhejna important hai
       });
 
-      const botText = res.data?.reply || "Sorry, I didn’t get that.";
+      const botText = res.data?.reply || "Sorry, I didn't get that.";
       const botReply = { from: "bot", text: botText };
       setMessages((prev) => [...prev, botReply]);
     } catch (error) {
@@ -57,19 +74,25 @@ const Home = () => {
         <h1 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500">
           💬 PsychBot
         </h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium transition-all"
-        >
-          Logout
-        </button>
+        <div className="flex items-center space-x-4">
+          {/* ✅ User ID display (optional) */}
+          <span className="text-xs text-gray-400 hidden sm:block">
+            User: {userId ? userId.substring(0, 8) + "..." : "Loading..."}
+          </span>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium transition-all"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Chat Box */}
       <div className="w-full max-w-2xl bg-gray-800 bg-opacity-60 backdrop-blur-md rounded-2xl shadow-lg flex flex-col h-[70vh] p-4 overflow-hidden">
         {/* Messages */}
         <div className="p-3 flex-1 overflow-y-auto space-y-3 mb-3 px-3 rounded-lg bg-gray-900 
-                scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-gray-700">
+                scrollbar-thin scrollbar-thumb-red-500 scrollbar-track-gray-700">
           {messages.map((msg, index) => (
             <div
               key={index}
@@ -115,10 +138,12 @@ const Home = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."
             className="flex-1 px-4 py-3 bg-transparent text-white outline-none"
+            disabled={!userId} // ✅ User ID load hone tak disable
           />
           <button
             type="submit"
-            className="px-5 py-3 bg-gradient-to-r from-pink-600 to-orange-500 hover:from-pink-700 hover:to-orange-600 text-white font-semibold transition-all duration-300"
+            disabled={!userId || !input.trim()}
+            className="px-5 py-3 bg-gradient-to-r from-pink-600 to-orange-500 hover:from-pink-700 hover:to-orange-600 text-white font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send
           </button>
