@@ -20,56 +20,116 @@ app.use(
 const PORT = process.env.PORT || 5000;
 connectDB();
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// Chat route using OpenRouter
+// ✅ FIX: User-specific conversation history
+const userSessions = new Map();
+
+// ✅ Function to get or create user session
+function getUserSession(userId) {
+  if (!userSessions.has(userId)) {
+    userSessions.set(userId, [
+      {
+        role: "system",
+        content: `
+You are a calm, kind, professional psychology-based therapist and counselor.
+Speak gently and naturally like a real human therapist sitting face-to-face.
+Start every reply with brief empathy (1–2 lines), showing emotional understanding.
+
+If the user's problem is unclear or incomplete, ask 1–2 short, thoughtful questions
+to understand their emotions, background, or situation better.
+
+Once you understand enough, give a simple psychological explanation (1 line),
+then offer diagnosis-style insight — explaining what condition, pattern,
+or emotional state the user might be experiencing (e.g., anxiety, guilt, overthinking, trauma).
+
+Follow that with practical psychological guidance (2–3 lines) —
+using easy, non-technical language anyone can follow.
+End each message with calm reassurance (1 line) that makes the user feel safe and supported.
+
+Never mention AI, data, or technology.
+Never break character.
+Always sound warm, human, and emotionally intelligent.
+dont use more than 150 words in a single response.
+like a real therapist 
+`,
+      },
+    ]);
+  }
+  return userSessions.get(userId);
+}
+
+// Chat route using Gemini
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, userId } = req.body; // ✅ userId frontend se aayega
+    
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
 
-    if (!message) return res.status(400).json({ error: "Message is required" });
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
 
-    const payload = {
-      model: "openai/gpt-oss-20b:free", // OpenRouter supports multiple models
-      messages: [
-        {
-          role: "system",
-          content: `
-You are a calm, kind, professional psychology-based assistant. Imagine you are sitting physically in front of the user, speaking to them in a gentle, human voice. Always respond in a conversational, empathetic, and supportive tone. RULES: 1. Speak naturally and warmly, reflecting deep care and understanding. 2. Analyze the user's input fully and respond with: - Empathetic reflection (1-2 short lines) - Simple psychological explanation (1 line) - Practical coping/therapy guidance (2-3 lines) - Calm reassurance or motivation (1 line)  3. Never ask the user to seek another professional, but you can guide them on self-observation, routines, coping strategies, and understanding their experiences. 4. Always maintain a safe, non-judgmental, peaceful, and supportive tone. 5. If the user mentions distress, self-harm, or danger, respond with grounding techniques, emotional support, and gentle reassurance. 6. Never break character or reveal you are an AI. Always respond as a live, empathetic therapist would 
-7. Keep responses concise, clear, and easy to understand.
-8. Use simple language, avoiding technical jargon.
-9. Always prioritize the user's emotional safety and well-being.
-10. never use the word "AI" or "artificial intelligence"
-11. never use the #,* or - characters
-`
-        },
-        { role: "user", content: message }
-      ],
-      max_tokens: 500,
-      temperature: 0.7
-    };
+    // ✅ FIX: User-specific history
+    const userConversationHistory = getUserSession(userId);
 
+    // Add user message
+    userConversationHistory.push({ role: "user", content: message });
+
+    // ✅ Fix role conversion for Gemini
+    const messages = userConversationHistory.map((m) => {
+      let role = "user";
+      if (m.role === "assistant") role = "model";
+      else if (m.role === "system") role = "user";
+      else role = m.role;
+      return {
+        role,
+        parts: [{ text: m.content }],
+      };
+    });
+
+    // Gemini API call
     const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      payload,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        contents: messages,
+      },
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`
-        }
+        },
       }
     );
 
-    const reply =
-      response.data?.choices?.[0]?.message?.content ||
-      "I'm sorry, I couldn't process that.";
+    const rawReply =
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Sorry, I couldn't understand that.";
+    const reply = cleanText(rawReply);
+
+    // ✅ Store assistant reply in user-specific history
+    userConversationHistory.push({ role: "assistant", content: reply });
 
     res.status(200).json({ success: true, reply });
   } catch (err) {
-    console.error("❌ Error calling OpenRouter AI:", err.response?.data || err.message);
-    res.status(500).json({ error: "OpenRouter API error" });
+    console.error("❌ Gemini API error:", err.response?.data || err.message);
+    res.status(500).json({
+      error:
+        err.response?.data?.error?.message ||
+        "Server error. Check backend logs.",
+    });
   }
 });
+
+const cleanText = (text) => {
+  if (!text) return "";
+  return text
+    .replace(/[*#_~`>-]/g, "")
+    .replace(/[-—]/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
 
 app.use("/api/users", userRoutes);
 
