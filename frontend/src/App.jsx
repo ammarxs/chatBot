@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./componants/home.jsx";
 import Login from "./componants/login.jsx"
-import Signup from "./componants/sigup.jsx";
+import Signup from "./componants/signup.jsx";
 import NotFound from "./componants/notFound.jsx";
 import ProtectedRoute from "./componants/ProtectedRoute.jsx";
 

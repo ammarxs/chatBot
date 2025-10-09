@@ -4,25 +4,24 @@ import axios from "axios";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [message, setMessage] = useState("");
 
-  // Handle input change
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.type === "text" ? "name" : e.target.type]: e.target.value });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const res = await axios.post("http://localhost:5000/api/users/register", formData);
       setMessage(res.data.message || "Registered Successfully 🎉");
-      setTimeout(() => navigate("/login"), 1500); // redirect to login page
+
+      // ✅ Redirect to Confirmation page instead of Login
+      setTimeout(() => {
+        navigate("/confirmation", { state: { email: formData.email } });
+      }, 1000);
+
     } catch (error) {
       setMessage(error.response?.data?.message || "Something went wrong ❌");
     }
@@ -35,7 +34,6 @@ const Signup = () => {
           Create Account
         </h2>
 
-        {/* ✅ Form */}
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <input
             type="text"
@@ -69,17 +67,13 @@ const Signup = () => {
           </button>
         </form>
 
-        {/* ✅ Response Message */}
         {message && (
           <p className="text-center mt-4 text-sm text-gray-300">{message}</p>
         )}
 
         <p className="text-center text-gray-400 mt-4">
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-pink-400 hover:text-pink-500 font-medium"
-          >
+          <Link to="/login" className="text-pink-400 hover:text-pink-500 font-medium">
             Login
           </Link>
         </p>
