@@ -4,6 +4,7 @@ import Login from "./componants/login.jsx"
 import Signup from "./componants/signup.jsx";
 import NotFound from "./componants/notFound.jsx";
 import ProtectedRoute from "./componants/ProtectedRoute.jsx";
+import VoiceChat from "./componants/voiceChat.jsx";
 
 function App() {
   return (
@@ -18,9 +19,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/voicechat"
+          element={
+            <ProtectedRoute>
+              <VoiceChat />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
+       
         <Route path="/signup" element={<Signup />} />
 
         {/* 404 */}

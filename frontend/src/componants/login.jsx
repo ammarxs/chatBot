@@ -23,16 +23,20 @@ const Login = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        // backend se error aya (400 ya 500)
         setError(data.message || "Login failed");
         return;
       }
 
-      // ✅ Save token & user info in localStorage
+      // ✅ Save token & user info
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // ✅ Navigate to home page
+      // ✅ Save unique userId separately
+      if (data.user?._id) {
+        localStorage.setItem("userId", data.user._id);
+      }
+
+      // ✅ Redirect to home
       navigate("/");
     } catch (err) {
       console.error("Error:", err);
@@ -72,7 +76,6 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Show error if any */}
         {error && (
           <p className="text-center text-red-400 mt-3 font-medium">{error}</p>
         )}

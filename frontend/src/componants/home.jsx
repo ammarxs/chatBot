@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
   const [messages, setMessages] = useState([
@@ -8,6 +9,11 @@ const Home = () => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
+
+  // ✅ Get logged-in user from localStorage
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userId = user?._id || user?.id; // backend ke structure ke hisaab se
 
   // ✅ Auto scroll
   useEffect(() => {
@@ -17,10 +23,16 @@ const Home = () => {
   // ✅ Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     window.location.href = "/login";
   };
 
-  // ✅ Send Message Function
+  // ✅ Navigate to Voice Chat
+  const handleVoiceChat = () => {
+    navigate("/voicechat");
+  };
+
+  // ✅ Send Message
   const sendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -31,15 +43,13 @@ const Home = () => {
     setIsTyping(true);
 
     try {
-      // ✅ API call
       const res = await axios.post("http://localhost:5000/api/chat", {
         message: input,
-        userId: "123", // 👈 add userId like your Postman test
+        userId, // 👈 unique userId goes here
       });
 
-      console.log("🧠 Backend Response:", res.data); // Debugging line
+      console.log("🧠 Backend Response:", res.data);
 
-      // ✅ Read correct field from backend
       const botText =
         res.data?.reply ||
         res.data?.message ||
@@ -67,17 +77,28 @@ const Home = () => {
         <h1 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500">
           💬 PsychBot
         </h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium transition-all"
-        >
-          Logout
-        </button>
+
+        <div className="flex items-center gap-3">
+          {/* 🎤 Voice Chat */}
+          <button
+            onClick={handleVoiceChat}
+            className="px-4 py-2 bg-gradient-to-r from-pink-600 to-orange-500 hover:from-pink-700 hover:to-orange-600 rounded-lg text-white font-medium transition-all shadow-md hover:shadow-lg"
+          >
+            🎤 Voice Chat
+          </button>
+
+          {/* 🚪 Logout */}
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium transition-all"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* 💭 Chat Box */}
       <div className="w-full max-w-2xl bg-gray-800 bg-opacity-60 backdrop-blur-md rounded-2xl shadow-lg flex flex-col h-[70vh] p-4 overflow-hidden">
-        {/* Messages */}
         <div
           className="p-3 flex-1 overflow-y-auto space-y-3 mb-3 px-3 rounded-lg bg-gray-900
                 scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-gray-700"
@@ -92,7 +113,7 @@ const Home = () => {
               <div
                 className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${
                   msg.from === "user"
-                    ? "bg-gradient-to-r from-pink-600 to-orange-500 hover:from-pink-700 hover:to-orange-600 text-white"
+                    ? "bg-gradient-to-r from-pink-600 to-orange-500 text-white"
                     : "bg-gray-700 text-gray-100"
                 }`}
               >
@@ -101,7 +122,6 @@ const Home = () => {
             </div>
           ))}
 
-          {/* Typing animation */}
           {isTyping && (
             <div className="flex justify-start">
               <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-xl text-sm flex items-center space-x-2">
@@ -114,7 +134,7 @@ const Home = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
+        {/* ✍️ Input */}
         <form
           onSubmit={sendMessage}
           className="flex items-center bg-gray-900 rounded-xl overflow-hidden"
